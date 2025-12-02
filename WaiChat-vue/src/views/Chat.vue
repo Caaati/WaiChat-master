@@ -99,7 +99,7 @@
         @search-error="showNotification"
     />
     <!-- 动态提示框的容器 -->
-    <div id="notification-container" ref="notificationContainer"></div>
+    <div id="notification-container" ref="notificationContainer" class="notification-wrapper"></div>
   </div>
 </template>
 
@@ -318,14 +318,16 @@ export default {
       const notification = document.createElement('div');
       notification.className = `notification notification-${type}`;
       notification.innerHTML = `
-        <div class="notification-icon">
-          ${type === 'error' ? '⚠️' : 'ℹ️'}
-        </div>
-        <div class="notification-content">${message}</div>
-      `;
+    <div class="notification-icon">
+      ${type === 'error' ? '⚠️' : 'ℹ️'}
+    </div>
+    <div class="notification-content">${message}</div>
+  `;
 
       container.appendChild(notification);
+      // 触发显示动画
       setTimeout(() => notification.classList.add('show'), 10);
+      // 3秒后自动消失
       setTimeout(() => {
         notification.classList.remove('show');
         setTimeout(() => notification.remove(), 300);
@@ -359,28 +361,29 @@ export default {
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          const senderId = data.userId || data.senderId;
           const message = {
             id: data.id || Date.now() + Math.random(),
-            senderId: data.userId || data.senderId,
+            senderId: senderId, // 使用临时变量
             targetId: data.targetId,
             content: data.content,
-            // 从 contacts 列表中查找发送者的昵称
-            senderName: this.contacts.find(c => c.id === message.senderId)?.nickname || '未知用户',
+            senderName: this.contacts.find(c => c.id === senderId)?.nickname || '未知用户',
             timestamp: data.createTime || new Date()
           };
-
-          // 如果消息是发给当前选中的联系人的，则添加到当前聊天窗口
-          if (this.selectedContactId == message.senderId) {
+          const contactIndex = this.contacts.findIndex(c => c.id == senderId);
+          if (contactIndex !== -1) {
+            // 1. 更新最后一条消息内容
+            this.contacts[contactIndex].lastMessage = message.content;
+            // 2. 将该联系人移到列表顶部（最新消息优先展示）
+            const updatedContact = this.contacts.splice(contactIndex, 1)[0];
+            this.contacts.unshift(updatedContact);
+          }
+          // 如果是当前选中的联系人消息，添加到聊天窗口
+          if (this.selectedContactId == senderId) {
             this.messages.push(message);
             this.scrollToBottom();
           } else {
-            // 否则，显示通知，并可以更新联系人列表中的最后一条消息
-            const contactIndex = this.contacts.findIndex(c => c.id == message.senderId);
-            if (contactIndex !== -1) {
-              this.contacts[contactIndex].lastMessage = message.content;
-              // 简单的排序，将最新收到消息的联系人移到最前面
-              this.contacts.unshift(this.contacts.splice(contactIndex, 1)[0]);
-            }
+            // 显示新消息通知
             this.showNotification(`收到来自 "${message.senderName}" 的新消息`);
           }
         } catch (e) {
@@ -713,6 +716,17 @@ export default {
 .send-button:disabled {
   background-color: #a0e5c1;
   cursor: not-allowed;
+}
+
+/* 通知容器 - 固定定位在主窗口右上角 */
+.notification-wrapper {
+  position: fixed; /* 浮在所有内容上方 */
+  top: 20px;
+  right: 20px;
+  z-index: 9999; /* 确保在最上层 */
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 通知之间的间距 */
 }
 
 /* --- 通知样式 --- */
