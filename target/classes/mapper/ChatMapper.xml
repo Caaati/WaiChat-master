@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zafu.waichat.mapper.ChatMapper">
+
+    <select id="selectChatHistory" resultType="com.zafu.waichat.pojo.entity.Chat">
+        SELECT * FROM chat
+        WHERE (user_id = #{userId1} AND target_id = #{userId2})
+           OR (user_id = #{userId2} AND target_id = #{userId1})
+        ORDER BY create_time ASC
+    </select>
+
+    <select id="selectContactList" resultType="com.zafu.waichat.pojo.dto.UserContactDTO">
+        SELECT
+            -- 1. 确定联系人的ID
+            CASE
+                WHEN c.user_id = #{userId} THEN c.target_id
+                ELSE c.user_id
+                END AS id,
+
+            -- 2. 获取联系人的 username
+            (SELECT username
+             FROM user
+             WHERE id = (
+                 CASE
+                     WHEN c.user_id = #{userId} THEN c.target_id
+                     ELSE c.user_id
+                     END
+                 )) AS username,
+
+            -- 3. 新增：获取联系人的 nickname
+            (SELECT nickname
+             FROM user
+             WHERE id = (
+                 CASE
+                     WHEN c.user_id = #{userId} THEN c.target_id
+                     ELSE c.user_id
+                     END
+                 )) AS nickname,
+
+            -- 4. 获取最后一条消息的内容
+            c.content
+
+        FROM chat c
+
+                 INNER JOIN (SELECT CASE
+                                        WHEN user_id = #{userId} THEN target_id
+                                        ELSE user_id
+                                        END          AS contact_id,
+                                    MAX(create_time) AS last_create_time
+                             FROM chat
+                             WHERE user_id = #{userId}
+                                OR target_id = #{userId}
+                             GROUP BY contact_id) AS last_chat ON (
+            (
+                (c.user_id = #{userId} AND c.target_id = last_chat.contact_id) OR
+                (c.target_id = #{userId} AND c.user_id = last_chat.contact_id)
+                )
+                AND
+            c.create_time = last_chat.last_create_time
+            )
+
+        ORDER BY c.create_time DESC;
+    </select>
+</mapper>
