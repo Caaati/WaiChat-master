@@ -83,6 +83,11 @@ public class AIController {
         }
     }
 
+    /**
+     * 智能回复 API
+     * @param chats 聊天历史记录列表
+     * @return 回复文本
+     */
     @PostMapping("/smartReply")
     public Result smartReply(@RequestBody List<ChatDTO> chats) {
         try {
@@ -106,11 +111,11 @@ public class AIController {
             });
             // 添加回复指令或标识
             historyText.append("我: ");
-            // 完整的大模型输入文本 (User Prompt)
             String userPrompt = historyText.toString();
-            // 4. 调用大模型
+            if (userPrompt.trim().isEmpty()) {
+                return Result.error("聊天记录为空，无法生成摘要。");
+            }
             GenerationResult back = MessageUtil.callWithMessageNormal(sys, userPrompt);
-            // 解析并返回结果
             String result = back.getOutput().getChoices().get(0).getMessage().getContent().trim();
 
             return Result.success(result);
@@ -119,6 +124,40 @@ public class AIController {
             // 记录详细错误信息
             e.printStackTrace();
             return Result.error("智能回复生成失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 聊天记录总结 API
+     * @param chats 聊天历史记录列表
+     * @return 总结后的文本
+     */
+    @PostMapping("/summarize")
+    public Result summarize(@RequestBody List<ChatDTO> chats) {
+        try {
+            // 设置系统提示词，要求LLM以简洁、分点的形式总结
+            String sys = "你是一个专业的聊天记录总结助手。" +
+                    "你的任务是将用户提供的聊天历史记录，以简洁、清晰、分点(1,2,3)的形式总结出核心内容、关键决策、待办事项和未解决的问题。" +
+                    "总结必须使用历史记录中的主要语言。只输出总结文本，不要包含任何额外说明或标题。";
+            StringBuilder historyText = new StringBuilder();
+            chats.forEach(item -> {
+                // 拼装历史记录，格式与智能回复保持一致
+                String sender = item.getUserId(); // 假设 userId 已经被映射为 "我" 或 "对方"
+                String content = item.getContent();
+                if (sender != null && content != null) {
+                    historyText.append(sender).append(": ").append(content).append("\n");
+                }
+            });
+            String userPrompt = historyText.toString();
+            if (userPrompt.trim().isEmpty()) {
+                return Result.error("聊天记录为空，无法生成摘要。");
+            }
+            GenerationResult back = MessageUtil.callWithMessageNormal(sys, userPrompt);
+            String result = back.getOutput().getChoices().get(0).getMessage().getContent().trim();
+            return Result.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("聊天摘要生成失败: " + e.getMessage());
         }
     }
 }
