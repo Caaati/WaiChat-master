@@ -59,25 +59,41 @@ public class AIController {
         try {
             String text = polishDTO.getText();
             String style = polishDTO.getStyle();
-            String sys = "你是一个聊天辅助工具，用于对用户输入的草稿内容进行润色或语气调整，只输出润色或语气调整后的文本，不要包含任何额外说明。当前选取的风格：";
-            if (style.equals("business"))
-                sys += "商务风格";
-            else if (style.equals("casual"))
-                sys += "休闲风格";
-            else
-                sys += "未指定,自由发挥";
+            String sys = "你是一个专业的多功能文本润色和风格调整AI。你的任务是严格按照用户指定的风格，对输入的文本进行优化。";
+            if (style.equals("business")) {
+                sys += "【风格要求】将文本润色为**正式、专业、严谨的商务风格**。使用礼貌且清晰的措辞，确保信息传达精确无误。";
+            } else if (style.equals("casual")) {
+                sys += "【风格要求】将文本调整为**友好、轻松、非正式的休闲风格**（语气软化）。消除任何可能存在的攻击性或生硬感，使其听起来更自然亲切。";
+            } else {
+                // 针对未指定风格的健壮性处理
+                sys += "【风格要求】未指定风格，请进行基础的语法和表达优化。";
+            }
+            sys += "【语言约束】润色后的文本**必须保持与原文本相同的语言**。" +
+                    "【格式约束】严格要求**只输出润色或调整后的文本本身**，不允许包含任何额外的解释、说明、标签或标点。";
             GenerationResult back = MessageUtil.callWithMessageNormal(sys, text);
-            String result = back.getOutput().getChoices().get(0).getMessage().getContent();
+            String result = back.getOutput().getChoices().get(0).getMessage().getContent().trim();
+            // 增加对空内容的校验，防止模型返回空字符串
+            if (result.isEmpty()) {
+                return Result.error("AI未能生成润色结果，请尝试调整原文。");
+            }
             return Result.success(result);
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            e.printStackTrace();
+            return Result.error("润色服务异常: " + e.getMessage());
         }
     }
 
     @PostMapping("/smartReply")
     public Result smartReply(@RequestBody List<ChatDTO> chats) {
         try {
-            String sys = "你是一个聊天智能回复助手，用户将输入历史聊天记录，请模仿最近一条消息的发送者（即“我”）的语气风格，输出最合适的下一条回复内容。回复内容必须简短且直接，只输出回复文本，不要包含任何额外说明。";
+            String sys = "\"你是一个高度专业且高效的多语言聊天回复模型。\n" +
+                    "**角色:** 你代表历史聊天记录中的最后发言者 '我'。\n" +
+                    "**目标:** 根据完整的聊天历史记录，尤其是**对方最近的一条消息**，生成一条最合适且自然的回复。\n" +
+                    "**语言及语气要求:**\n" +
+                    "1.  回复的**语言**必须与聊天历史中**对方最近一条消息**的语言保持一致。\n" +
+                    "2.  回复的**语气和风格**必须模仿 '我' 在历史记录中展现的风格。\n" +
+                    "3.  回复必须**简短、直接、实用**。\n" +
+                    "**格式约束:** 严格要求你**只输出回复文本本身**，不允许包含任何多余的问候、解释、标点、或标签（如 '回复:'）。\"";
             StringBuilder historyText = new StringBuilder();
             chats.forEach(item -> {
                 // 使用 userId 来区分发言者，并以 "发言者: 内容\n" 的形式拼装
