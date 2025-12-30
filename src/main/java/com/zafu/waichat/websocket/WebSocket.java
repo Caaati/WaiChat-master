@@ -20,11 +20,20 @@ import java.util.concurrent.CopyOnWriteArraySet;
 @Slf4j
 @ServerEndpoint(value = "/ws/{userId}")
 public class WebSocket {
+    // 1. 将成员变量改为 static
+    private static ObjectMapper objectMapper;
+    private static ChatService chatService;
+
+    // 2. 通过 setter 方法配合 @Autowired 注入静态变量
     @Autowired
-    private ObjectMapper objectMapper;
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        WebSocket.objectMapper = objectMapper;
+    }
+
     @Autowired
-    private ChatService chatService; // 用于保存消息到数据库
-    //与某个客户端的连接会话，需要通过它来给客户端发送数据
+    public void setChatService(ChatService chatService) {
+        WebSocket.chatService = chatService;
+    }
     private Session session;
     /**
      * 用户ID

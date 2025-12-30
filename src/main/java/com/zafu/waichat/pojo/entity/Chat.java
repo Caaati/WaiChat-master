@@ -19,4 +19,8 @@ public class Chat {
     private Integer status;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
+    private String type;  // 消息类型: "TEXT" 或 "VOICE"
+    private String audioUrl; // 语音文件存储路径
+    private Integer duration; // 语音时长（秒）
 }

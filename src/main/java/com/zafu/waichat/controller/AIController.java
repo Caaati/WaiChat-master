@@ -1,9 +1,20 @@
 package com.zafu.waichat.controller;
 
 import com.alibaba.dashscope.aigc.generation.GenerationResult;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationParam;
+import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversationResult;
+import com.alibaba.dashscope.common.MultiModalMessage;
+import com.alibaba.dashscope.common.Role;
+import com.alibaba.dashscope.exception.ApiException;
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
+import com.alibaba.dashscope.utils.JsonUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.zafu.waichat.mapper.LanguageMapper;
 import com.zafu.waichat.mapper.UserMapper;
 import com.zafu.waichat.pojo.dto.ChatDTO;
@@ -18,7 +29,12 @@ import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -116,7 +132,7 @@ public class AIController {
             for (int i = chats.size() - 1; i >= 0; i--) {
                 ChatDTO chat = chats.get(i);
                 // 有效消息需包含userId（我/对方）和content
-                if (("我".equals(chat.getUserId()) || "对方".equals(chat   .getUserId())) && chat.getContent() != null && !chat.getContent().trim().isEmpty()) {
+                if (("我".equals(chat.getUserId()) || "对方".equals(chat.getUserId())) && chat.getContent() != null && !chat.getContent().trim().isEmpty()) {
                     lastValidChat = chat;
                     break;
                 }
@@ -251,6 +267,43 @@ public class AIController {
         } catch (Exception e) {
             e.printStackTrace();
             return Result.error("分析服务失败: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/audio/stt")
+    public Result transcribe(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return Result.error("上传文件不能为空");
+        }
+
+        File tempFile = null;
+        try {
+            // 将 MultipartFile 保存为临时文件
+            // 获取系统临时目录并创建一个前缀为 "stt_" 的临时文件
+            tempFile = File.createTempFile("stt_", "_" + file.getOriginalFilename());
+            file.transferTo(tempFile);
+            MultiModalConversationResult result = MessageUtil.audioCaptioner(tempFile);
+            // 获取返回的第一个回答的第一个内容块中的文本信息
+            JsonObject jsonObject = JsonUtils.toJsonObject(result);
+            String message = String.valueOf(jsonObject.get("message"));
+            return Result.success(message);
+        } catch (NoApiKeyException e) {
+            log.error("API Key 缺失: {}", e.getMessage());
+            return Result.error("服务器 AI 配置异常");
+        } catch (UploadFileException e) {
+            log.error("文件上传到 DashScope 失败: {}", e.getMessage());
+            return Result.error("语音解析失败：上传异常");
+        } catch (ApiException e) {
+            log.error("DashScope API 调用异常: {}", e.getMessage());
+            return Result.error("AI 服务暂不可用");
+        } catch (IOException e) {
+            log.error("文件处理异常: {}", e.getMessage());
+            return Result.error("系统文件错误");
+        } finally {
+            // 清理临时文件，防止磁盘写满
+            if (tempFile != null && tempFile.exists()) {
+                tempFile.delete();
+            }
         }
     }
 }

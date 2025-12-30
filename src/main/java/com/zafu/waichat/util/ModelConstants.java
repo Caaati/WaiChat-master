@@ -5,4 +5,5 @@ public final class ModelConstants {
     public static final String MT_LITE = "qwen-mt-lite";
     public static final String QW_FLASH = "qwen-flash";
     public static final String QW_PLUS = "qwen-plus";
+    public static final String QW_ASR = "qwen3-asr-flash";
 }
