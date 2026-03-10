@@ -92,8 +92,7 @@ public class AIController {
             }
             sys += "【语言约束】润色后的文本**必须保持与原文本相同的语言**。" +
                     "【格式约束】严格要求**只输出润色或调整后的文本本身**，不允许包含任何额外的解释、说明、标签或标点。";
-            GenerationResult back = MessageUtil.callWithMessageNormal(sys, text);
-            String result = back.getOutput().getChoices().get(0).getMessage().getContent().trim();
+            String result = MessageUtil.callWithMessageNormal(sys, text);;
             // 增加对空内容的校验，防止模型返回空字符串
             if (result.isEmpty()) {
                 return Result.error("AI未能生成润色结果，请尝试调整原文。");
@@ -172,8 +171,7 @@ public class AIController {
                 return Result.error("聊天记录为空，无法生成摘要。");
             }
             // 调用大模型生成回复
-            GenerationResult back = MessageUtil.callWithMessageNormal(sys1 + sys_role + sys2, userPrompt);
-            String result = back.getOutput().getChoices().get(0).getMessage().getContent().trim();
+            String result = MessageUtil.callWithMessageNormal(sys1 + sys_role + sys2, userPrompt);
             return Result.success(result);
 
         } catch (Exception e) {
@@ -206,8 +204,7 @@ public class AIController {
             if (userPrompt.trim().isEmpty()) {
                 return Result.error("聊天记录为空，无法生成摘要。");
             }
-            GenerationResult back = MessageUtil.callWithMessageNormal(sys, userPrompt);
-            String result = back.getOutput().getChoices().get(0).getMessage().getContent().trim();
+            String result = MessageUtil.callWithMessageNormal(sys, userPrompt);
             return Result.success(result);
         } catch (Exception e) {
             e.printStackTrace();
@@ -245,8 +242,7 @@ public class AIController {
                 return Result.error("记录为空");
             }
 
-            GenerationResult back = MessageUtil.callWithMessageNormal(sys, userPrompt);
-            String resultJson = back.getOutput().getChoices().get(0).getMessage().getContent().trim();
+            String resultJson = MessageUtil.callWithMessageNormal(sys, userPrompt);
 
             // 清理 Markdown 符号
             if (resultJson.startsWith("```")) {

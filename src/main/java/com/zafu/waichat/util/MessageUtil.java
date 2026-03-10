@@ -14,17 +14,18 @@ import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+
+import static com.zafu.waichat.util.StringUtil.stringOf;
 
 public class MessageUtil {
-    private static String apiKey = "sk-b9bedc9945a2433fa4f6958d5b9a2552";
+    @Value("${spring.ai.dashscope.api-key}")
+    private static String apiKey;
 
-    public static GenerationResult callWithMessageNormal(String sys, String user) throws ApiException, NoApiKeyException, InputRequiredException {
+    public static String callWithMessageNormal(String sys, String user) throws ApiException, NoApiKeyException, InputRequiredException {
         Generation gen = new Generation();
         Message systemMsg = Message.builder()
                 .role(Role.SYSTEM.getValue())
@@ -41,8 +42,34 @@ public class MessageUtil {
                 .messages(Arrays.asList(systemMsg, userMsg))
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
                 .build();
-        return gen.call(param);
+        GenerationResult result =  gen.call(param);
+        return result.getOutput().getChoices().get(0).getMessage().getContent().trim();
     }
+
+//    public static String callWithMessageNormal(String sys, String user) throws ApiException, NoApiKeyException, UploadFileException {
+//        MultiModalConversation conv = new MultiModalConversation();
+//        List<Map<String, Object>> sysContentList = Arrays.asList(
+//                Collections.singletonMap("text", sys)
+//        );
+//        List<Map<String, Object>> userContentList = Arrays.asList(
+//                Collections.singletonMap("text", user)
+//        );
+//        MultiModalMessage systemMsg = MultiModalMessage.builder()
+//                .role(Role.SYSTEM.getValue())
+//                .content(sysContentList)
+//                .build();
+//        MultiModalMessage userMsg = MultiModalMessage.builder()
+//                .role(Role.USER.getValue())
+//                .content(userContentList)
+//                .build();
+//        MultiModalConversationParam  param = MultiModalConversationParam.builder()
+//                .apiKey(apiKey)
+//                .model(ModelConstants.QW_FLASH)
+//                .messages(Arrays.asList(systemMsg, userMsg))
+//                .build();
+//        MultiModalConversationResult result = conv.call(param);
+//        return stringOf(result.getOutput().getChoices().get(0).getMessage().getContent().get(0).get("text"));
+//    }
 
     public static GenerationResult translateWithTarget(String msg, String target) throws ApiException, NoApiKeyException, InputRequiredException {
         Generation gen = new Generation();
@@ -55,7 +82,6 @@ public class MessageUtil {
                 .targetLang(target)
                 .build();
         GenerationParam param = GenerationParam.builder()
-                // 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：.apiKey("sk-xxx")
                 .apiKey(apiKey)
                 .model(ModelConstants.MT_LITE)
                 .messages(Collections.singletonList(userMsg))
@@ -76,7 +102,6 @@ public class MessageUtil {
                 .targetLang(target)
                 .build();
         GenerationParam param = GenerationParam.builder()
-                // 若没有配置环境变量，请用阿里云百炼API Key将下行替换为：.apiKey("sk-xxx")
                 .apiKey(apiKey)
                 .model(model)
                 .messages(Collections.singletonList(userMsg))
@@ -104,7 +129,7 @@ public class MessageUtil {
         // asrOptions.put("language", "zh"); // 可选，若已知音频的语种，可通过该参数指定待识别语种，以提升识别准确率
         MultiModalConversationParam param = MultiModalConversationParam.builder()
                 .apiKey(apiKey)
-                .model(ModelConstants.QW_ASR)
+                .model(ModelConstants.QW_AUDIO)
                 .message(sysMessage)
                 .message(userMessage)
                 .parameter("asr_options", asrOptions)

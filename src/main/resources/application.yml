@@ -5,3 +5,12 @@ spring:
     username: root
     password: AXem8bxnCXEeYzXm
     driver-class-name: com.mysql.cj.jdbc.Driver
+  ai:
+    dashscope:
+      api-key: sk-b9bedc9945a2433fa4f6958d5b9a2552
+server:
+  port: 8080
+
+waichat:
+  url: http://116.62.163.226:8080
+  fileUrl: http://116.62.163.226:8080/uploads/audio/
