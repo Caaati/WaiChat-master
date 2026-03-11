@@ -5,9 +5,6 @@ spring:
     username: root
     password: AXem8bxnCXEeYzXm
     driver-class-name: com.mysql.cj.jdbc.Driver
-  ai:
-    dashscope:
-      api-key: sk-b9bedc9945a2433fa4f6958d5b9a2552
 server:
   port: 8080
 

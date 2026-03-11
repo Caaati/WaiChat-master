@@ -22,8 +22,8 @@ import java.util.*;
 import static com.zafu.waichat.util.StringUtil.stringOf;
 
 public class MessageUtil {
-    @Value("${spring.ai.dashscope.api-key}")
-    private static String apiKey;
+//    @Value("${spring.ai.dashscope.api-key}")
+    private static String apiKey = "sk-b9bedc9945a2433fa4f6958d5b9a2552";
 
     public static String callWithMessageNormal(String sys, String user) throws ApiException, NoApiKeyException, InputRequiredException {
         Generation gen = new Generation();
