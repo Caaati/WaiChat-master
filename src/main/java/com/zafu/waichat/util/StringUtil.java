@@ -1,5 +1,9 @@
 package com.zafu.waichat.util;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * @author yh
  * @create 2022-4-6 1:54
@@ -59,5 +63,14 @@ public class StringUtil {
     } else {
       return "TO_DATE(:" + placeholder + ",'yyyy-MM-dd HH24:mi:ss')";
     }
+  }
+
+  /**
+   * 构造唯一的会话 Key
+   */
+  public static String getChatKey(String id1, String id2) {
+    List<String> ids = Arrays.asList(id1, id2);
+    Collections.sort(ids); // 排序，保证 A-B 和 B-A 生成同一个 Key
+    return "chat:msg:" + ids.get(0) + ":" + ids.get(1);
   }
 }

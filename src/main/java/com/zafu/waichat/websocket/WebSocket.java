@@ -3,6 +3,7 @@ package com.zafu.waichat.websocket;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zafu.waichat.pojo.entity.Chat;
 import com.zafu.waichat.service.ChatService;
+import com.zafu.waichat.util.RedisUtil;
 import com.zafu.waichat.util.Result;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
@@ -13,8 +14,12 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.TimeUnit;
+
+import static com.zafu.waichat.util.StringUtil.getChatKey;
 
 @Component
 @Slf4j
@@ -23,6 +28,7 @@ public class WebSocket {
     // 1. 将成员变量改为 static
     private static ObjectMapper objectMapper;
     private static ChatService chatService;
+    private static RedisUtil redisUtil;
 
     // 2. 通过 setter 方法配合 @Autowired 注入静态变量
     @Autowired
@@ -34,6 +40,12 @@ public class WebSocket {
     public void setChatService(ChatService chatService) {
         WebSocket.chatService = chatService;
     }
+
+    @Autowired
+    public void setRedisUtil(RedisUtil redisUtil) {
+        WebSocket.redisUtil = redisUtil;
+    }
+
     private Session session;
     /**
      * 用户ID
@@ -134,38 +146,41 @@ public class WebSocket {
         }
     }
 
-    // 单点消息发送（优化版）
+    // 单点消息发送
     public void sendOneMessage(Chat chat) throws Exception {
-        Integer targetUserId = chat.getTargetId();
-        Integer senderUserId = chat.getUserId();
+        String targetId = String.valueOf(chat.getTargetId());
+        String senderId = String.valueOf(chat.getUserId());
 
-        // 先保存消息到数据库
-        boolean saveSuccess = chatService.saveChatMessage(chat);
-        if (!saveSuccess) {
-            throw new Exception("消息保存失败");
-        }
+        // 1. 生成 Redis Key (保证 A->B 和 B->A 的 Key 一致)
+        String redisKey = getChatKey(senderId, targetId);
 
-        Session session = sessionPool.get(targetUserId);
-        log.info("【WebSocket】单点消息: 发送者[{}] -> 接收者[{}], 内容:{}",
-                senderUserId, targetUserId, chat.getContent());
+        // 2. 预设一些数据库默认值（如创建时间），防止 Redis 和 MySQL 数据不一致
+        chat.setCreateTime(LocalDateTime.now());
 
-        if (session != null && session.isOpen()) {
+        // 3. 同步写入 Redis 热数据（List 结构）
+        // 先转 JSON，再存入。这里使用 rPush (从右侧入队)
+        String messageJson = objectMapper.writeValueAsString(chat);
+        redisUtil.lPush(redisKey, messageJson);
+
+        // 4. 重点：保持热数据长度，只留最近 50 条 (需要给 RedisUtil 增加 lTrim 方法)
+        // stringRedisTemplate.opsForList().trim(redisKey, 0, 49);
+        redisUtil.expire(redisKey, 7, TimeUnit.DAYS); // 7天无消息则释放内存
+
+        // 5. 异步保存数据库（推荐用线程池或 MQ，这里演示简单异步）
+        CompletableFuture.runAsync(() -> {
             try {
-                // 发送完整的消息对象（包含发送者信息和时间）
-                String messageJson = objectMapper.writeValueAsString(chat);
-                // 正确实现 CompletionHandler 接口的两个抽象方法
-                session.getAsyncRemote().sendText(messageJson, result -> {
-                    if (result.isOK()) {
-                        log.info("消息发送成功: 发送者[{}] -> 接收者[{}]", chat.getUserId(), chat.getTargetId());
-                    } else {
-                        log.error("消息发送失败: 发送者[{}] -> 接收者[{}]", chat.getUserId(), chat.getTargetId(), result.getException());
-                    }
-                });
-
+                chatService.saveChatMessage(chat);
             } catch (Exception e) {
-                log.error("消息发送异常", e);
-                throw e;
+                log.error("数据库异步落库失败", e);
             }
+        });
+
+        // 6. WebSocket 推送
+        Session session = sessionPool.get(chat.getTargetId());
+        if (session != null && session.isOpen()) {
+            session.getAsyncRemote().sendText(messageJson, result -> {
+                if (!result.isOK()) log.error("WS推送失败: {}", result.getException().getMessage());
+            });
         }
     }
 

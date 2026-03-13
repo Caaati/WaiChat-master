@@ -9,13 +9,13 @@
     </update>
 
     <select id="selectChatHistory" resultType="com.zafu.waichat.pojo.entity.Chat">
-        SELECT *
+        SELECT id, user_id, target_id, content, type, audio_url, duration, create_time
         FROM chat
         WHERE status = 1
-          AND (
-            (user_id = #{userId1} AND target_id = #{userId2})
-                OR (user_id = #{userId2} AND target_id = #{userId1}))
-        ORDER BY create_time ASC
+          AND ((user_id = #{userId1} AND target_id = #{userId2})
+            OR (user_id = #{userId2} AND target_id = #{userId1}))
+        ORDER BY create_time DESC -- 降序更符合“最近消息”查询
+        LIMIT 50
     </select>
 
     <select id="selectContactList" resultType="com.zafu.waichat.pojo.dto.UserContactDTO">
