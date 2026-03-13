@@ -11,17 +11,20 @@ import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
 import com.alibaba.dashscope.utils.JsonUtils;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.zafu.waichat.mapper.LanguageMapper;
 import com.zafu.waichat.mapper.UserMapper;
+import com.zafu.waichat.pojo.dto.AudioDTO;
 import com.zafu.waichat.pojo.dto.ChatDTO;
 import com.zafu.waichat.pojo.dto.PolishDTO;
 import com.zafu.waichat.pojo.dto.TranslateDTO;
 import com.zafu.waichat.pojo.entity.Language;
 import com.zafu.waichat.pojo.entity.User;
+import com.zafu.waichat.pojo.vo.AudioVO;
 import com.zafu.waichat.pojo.vo.TranslateVO;
 import com.zafu.waichat.util.MessageUtil;
 import com.zafu.waichat.util.Result;
@@ -76,6 +79,24 @@ public class AIController {
             return Result.error(e.getMessage());
         }
     }
+
+    @PostMapping("/voiceToText")
+    public Result voiceToText(@RequestBody AudioDTO audioDTO) {
+        try {
+            if (StringUtils.isEmpty(audioDTO.getAudioUrl())) {
+                return Result.error("音频URL不能为空");
+            }
+            String result = MessageUtil.voiceToText(audioDTO.getAudioUrl());
+            AudioVO vo = new AudioVO();
+            vo.setText(result);
+
+            return Result.success(vo);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+
+    }
+
 
     @PostMapping("/polish")
     public Result polish(@RequestBody PolishDTO polishDTO) {

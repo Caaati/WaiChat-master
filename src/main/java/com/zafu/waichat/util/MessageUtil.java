@@ -14,15 +14,16 @@ import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.dashscope.exception.UploadFileException;
-import org.springframework.beans.factory.annotation.Value;
+import com.alibaba.dashscope.utils.JsonUtils;
 
 import java.io.File;
-import java.util.*;
-
-import static com.zafu.waichat.util.StringUtil.stringOf;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MessageUtil {
-//    @Value("${spring.ai.dashscope.api-key}")
+    //    @Value("${spring.ai.dashscope.api-key}")
     private static String apiKey = "sk-b9bedc9945a2433fa4f6958d5b9a2552";
 
     public static String callWithMessageNormal(String sys, String user) throws ApiException, NoApiKeyException, InputRequiredException {
@@ -42,7 +43,7 @@ public class MessageUtil {
                 .messages(Arrays.asList(systemMsg, userMsg))
                 .resultFormat(GenerationParam.ResultFormat.MESSAGE)
                 .build();
-        GenerationResult result =  gen.call(param);
+        GenerationResult result = gen.call(param);
         return result.getOutput().getChoices().get(0).getMessage().getContent().trim();
     }
 
@@ -135,5 +136,36 @@ public class MessageUtil {
                 .parameter("asr_options", asrOptions)
                 .build();
         return conv.call(param);
+    }
+
+    public static String voiceToText(String audioUrl) throws ApiException, NoApiKeyException, UploadFileException {
+        MultiModalConversation conv = new MultiModalConversation();
+        MultiModalMessage userMessage = MultiModalMessage.builder()
+                .role(Role.USER.getValue())
+                .content(Arrays.asList(
+                        Collections.singletonMap("audio", audioUrl)))
+                .build();
+
+        // 修复：必须为 sysMessage 设置 content，不能为空
+        MultiModalMessage sysMessage = MultiModalMessage.builder()
+                .role(Role.SYSTEM.getValue())
+                .content(Arrays.asList(Collections.singletonMap("text", "")))
+                .build();
+
+        Map<String, Object> asrOptions = new HashMap<>();
+        asrOptions.put("enable_itn", false);
+        // asrOptions.put("language", "zh"); // 可选，若已知音频的语种，可通过该参数指定待识别语种，以提升识别准确率
+        MultiModalConversationParam param = MultiModalConversationParam.builder()
+                // 新加坡/美国地域和北京地域的API Key不同。获取API Key：https://help.aliyun.com/zh/model-studio/get-api-key
+                // 若没有配置环境变量，请用百炼API Key将下行替换为：.apiKey("sk-xxx")
+                .apiKey(apiKey)
+                // 若使用美国地域的模型，需在模型后面加上"-us"后缀，例如 qwen3-asr-flash-us
+                .model("qwen3-asr-flash")
+                .message(sysMessage)
+                .message(userMessage)
+                .parameter("asr_options", asrOptions)
+                .build();
+        MultiModalConversationResult result = conv.call(param);
+        return JsonUtils.toJson(result);
     }
 }
