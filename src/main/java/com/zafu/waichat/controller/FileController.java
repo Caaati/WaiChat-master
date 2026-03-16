@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.UUID;
 
 @RestController
@@ -27,7 +29,9 @@ public class FileController {
             // 获取项目根目录的绝对路径
             String projectPath = System.getProperty("user.dir");
             // 设定保存的文件夹
-            String uploadDir = projectPath + File.separator + "uploads" + File.separator + "audio" + File.separator;
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MMdd");
+            String datePath = sdf.format(new Date());
+            String uploadDir = projectPath + File.separator + "uploads" + File.separator + "audio" + File.separator + datePath + File.separator;
             File dir = new File(uploadDir);
             // 核心：确保物理磁盘上真正创建了这些文件夹
             if (!dir.exists()) {
@@ -42,8 +46,7 @@ public class FileController {
             // 执行保存
             file.transferTo(destFile);
             // 返回可访问的 URL
-//            String url = "http://localhost:8080/uploads/audio/" + fileName;
-            String url = fileUrl + fileName;
+            String url = fileUrl + datePath + "/" + fileName;
             return Result.success(url);
         } catch (Exception e) {
             log.error("语音上传实际失败原因: ", e);
