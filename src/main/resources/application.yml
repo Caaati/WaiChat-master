@@ -1,7 +1,7 @@
 spring.application.name: WaiChat
 spring:
   datasource:
-    url: jdbc:mysql://116.62.163.226:3306/waichat
+    url: jdbc:mysql://124.220.61.45:3306/waichat
     username: root
     password: AXem8bxnCXEeYzXm
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -14,8 +14,8 @@ spring:
       connection-test-query: SELECT 1
   data:
     redis:
-      host: 116.62.163.226
-      password: 8PDjYc5SDWJmjpDp
+      host: 124.220.61.45
+      password: Fwcw3mS44iM7zCnF
       port: 6379
       database: 0
       timeout: 1800000
@@ -32,5 +32,5 @@ server:
   port: 8080
 
 waichat:
-  url: http://116.62.163.226:8080
-  fileUrl: http://116.62.163.226:8080/uploads/audio/
+  url: http://124.220.61.45:8080
+  fileUrl: http://124.220.61.45:8080/uploads/audio/
