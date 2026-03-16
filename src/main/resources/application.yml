@@ -5,6 +5,13 @@ spring:
     username: root
     password: AXem8bxnCXEeYzXm
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      initialization-fail-timeout: 0
+      minimum-idle: 5
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      validation-timeout: 5000
+      connection-test-query: SELECT 1
   data:
     redis:
       host: 116.62.163.226

@@ -53,4 +53,19 @@ public enum LanguageEnum {
         }
         throw new IllegalArgumentException("暂不支持的语言代码: " + code);
     }
+
+    // 根据englishName获取LanguageEnum
+    public static LanguageEnum getByEnglishName(String englishName) {
+        // 判空，避免空指针
+        if (englishName == null) {
+            throw new IllegalArgumentException("语言英文名称不能为空");
+        }
+        // 遍历枚举，匹配englishName（忽略大小写，增强兼容性）
+        for (LanguageEnum lang : values()) {
+            if (lang.englishName.equalsIgnoreCase(englishName)) {
+                return lang;
+            }
+        }
+        throw new IllegalArgumentException("暂不支持的语言英文名称: " + englishName);
+    }
 }

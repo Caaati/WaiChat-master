@@ -5,5 +5,5 @@ import lombok.Data;
 @Data
 public class AudioVO {
     private String text;
-    private String confidence;
+    private String language;
 }

@@ -26,6 +26,7 @@ import com.zafu.waichat.pojo.entity.Language;
 import com.zafu.waichat.pojo.entity.User;
 import com.zafu.waichat.pojo.vo.AudioVO;
 import com.zafu.waichat.pojo.vo.TranslateVO;
+import com.zafu.waichat.util.LanguageEnum;
 import com.zafu.waichat.util.MessageUtil;
 import com.zafu.waichat.util.Result;
 import io.swagger.annotations.Api;
@@ -40,6 +41,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static com.zafu.waichat.util.StringUtil.stringOf;
 
 @RestController
 @RequestMapping("/ai")
@@ -86,10 +89,12 @@ public class AIController {
             if (StringUtils.isEmpty(audioDTO.getAudioUrl())) {
                 return Result.error("音频URL不能为空");
             }
-            String result = MessageUtil.voiceToText(audioDTO.getAudioUrl());
+            MultiModalConversationResult call = MessageUtil.voiceToText(audioDTO.getAudioUrl());
+            String text = stringOf(call.getOutput().getChoices().get(0).getMessage().getContent().get(0).get("text"));
+            String language = stringOf(call.getOutput().getChoices().get(0).getMessage().getAnnotations().get(0).get("language"));
             AudioVO vo = new AudioVO();
-            vo.setText(result);
-
+            vo.setText(text);
+            vo.setLanguage(language);
             return Result.success(vo);
         } catch (Exception e) {
             return Result.error(e.getMessage());
@@ -299,11 +304,9 @@ public class AIController {
             // 获取系统临时目录并创建一个前缀为 "stt_" 的临时文件
             tempFile = File.createTempFile("stt_", "_" + file.getOriginalFilename());
             file.transferTo(tempFile);
-            MultiModalConversationResult result = MessageUtil.audioCaptioner(tempFile);
-            // 获取返回的第一个回答的第一个内容块中的文本信息
-            JsonObject jsonObject = JsonUtils.toJsonObject(result);
-            String message = String.valueOf(jsonObject.get("message"));
-            return Result.success(message);
+            MultiModalConversationResult call = MessageUtil.voiceToText(tempFile);
+            String text = stringOf(call.getOutput().getChoices().get(0).getMessage().getContent().get(0).get("text"));
+            return Result.success(text);
         } catch (NoApiKeyException e) {
             log.error("API Key 缺失: {}", e.getMessage());
             return Result.error("服务器 AI 配置异常");
